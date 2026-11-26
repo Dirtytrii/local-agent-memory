@@ -1,0 +1,39 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+  <key>Label</key>
+  <string>com.local-agent-memory.mcp</string>
+  <key>ProgramArguments</key>
+  <array>
+    <string>/bin/sh</string>
+    <string>-lc</string>
+    <string>exec "$HOME/.local/bin/bm" mcp --transport streamable-http --host 127.0.0.1 --port 8765</string>
+  </array>
+  <key>EnvironmentVariables</key>
+  <dict>
+    <key>BASIC_MEMORY_READ_ONLY</key>
+    <string>true</string>
+    <key>HF_HUB_OFFLINE</key>
+    <string>1</string>
+    <key>PYTHONUTF8</key>
+    <string>1</string>
+    <key>LOGFIRE_IGNORE_NO_CONFIG</key>
+    <string>1</string>
+    <key>NO_PROXY</key>
+    <string>127.0.0.1,localhost</string>
+    <key>no_proxy</key>
+    <string>127.0.0.1,localhost</string>
+  </dict>
+  <key>RunAtLoad</key>
+  <true/>
+  <key>KeepAlive</key>
+  <true/>
+  <key>ThrottleInterval</key>
+  <integer>15</integer>
+  <key>StandardOutPath</key>
+  <string>/tmp/local-agent-memory-mcp.log</string>
+  <key>StandardErrorPath</key>
+  <string>/tmp/local-agent-memory-mcp.log</string>
+</dict>
+</plist>

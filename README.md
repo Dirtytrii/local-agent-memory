@@ -45,7 +45,7 @@ flowchart LR
         HN["Hermes Non-MCP Profile<br/>(Direct _index.md Read)"]
     end
 
-    CORE -->|"sync-static-core.ps1<br/>(SHA-256 drift guard)"| AG & CX & HM & HN
+    CORE -->|"sync-static-core.py / .ps1<br/>(SHA-256 drift guard)"| AG & CX & HM & HN
     DOM & EP --> BM
     OLL <--> BM
     BM -->|"Read-Only MCP<br/>(bm_search/bm_read)"| AG & CX & HM
@@ -64,8 +64,9 @@ flowchart LR
   2. Adds CJK Bigram + BM25 OR-relaxed fallback with stop-character filtering and a multi-term coverage guard (lifted pure-FTS recall from `1/20` to `20/20` on our 20-query Chinese benchmark while keeping `5/5` negative-sample rejection).
   3. Server-side read-only enforcement via FastMCP `Visibility(False)` hiding `bm_write`/`bm_edit`/`bm_move`/`bm_delete`/`bm_project_delete` and blocking `bm_project(command="create")` by default (`BASIC_MEMORY_READ_ONLY=true`).
 - **Two-Tier Graceful Degradation (G9)**: If local Ollama is offline and `bm_search(mode="hybrid")` errors, clients drop to `bm_search(mode="text")` (patched CJK FTS); if MCP itself is unavailable, clients fall back to reading domain `_index.md` directly. When Ollama restarts, `basic-memory` self-heals automatically without a restart.
-- **Managed-Block Static Core Sync** ([`scripts/sync-static-core.ps1`](scripts/sync-static-core.ps1)):
-  - Dry-run by default (`-Apply` required to write);
+- **Managed-Block Static Core Sync** ([`scripts/sync-static-core.py`](scripts/sync-static-core.py) & [`scripts/sync-static-core.ps1`](scripts/sync-static-core.ps1)):
+  - Cross-platform Python 3 and Windows PowerShell implementations with **byte-identical SHA-256 parity**;
+  - Dry-run by default (`--apply` / `-Apply` required to write);
   - Supports per-target conditional blocks (`<!-- target: ... -->`) and compact `core-lite` (`<= 2 KB`) extraction;
   - Protects YAML frontmatter lines 1–3 (`trigger: always_on`), creates first-run `.bak` backups, aborts with line diff on SHA-256 drift, enforces UTF-8 (no BOM) + LF, and refuses to touch `USER.md` / `MEMORY.md`.
 - **Read-Only Freshness & Governance Auditor** ([`scripts/audit-freshness.py`](scripts/audit-freshness.py)):
@@ -95,7 +96,7 @@ If you are an AI coding agent (Antigravity, Codex, Claude Code, Hermes, Cursor, 
    - Pin `basic-memory==1.0.0`, apply `python scripts/apply-zh-fts-patch.py --apply`, verify 4/4 `[OK]` via `--check`;
    - Scaffold the vault from `examples/demo-vault/` structure, run `python scripts/audit-freshness.py --root <vault> --strict` (must pass with 0 errors), and verify `git status` stays clean after `bm reindex`;
    - Register loopback-only (`127.0.0.1:8765/mcp`) read-only MCP service (`HF_HUB_OFFLINE=1`, `BASIC_MEMORY_READ_ONLY=true`, `NO_PROXY=127.0.0.1,localhost`);
-   - Always preview `sync-static-core.ps1` in **dry-run** mode before passing `-Apply`; onboard one client/profile at a time and verify G4 isolation before moving to the next.
+   - Always preview `sync-static-core.py` (or `sync-static-core.ps1`) in **dry-run** mode before passing `--apply` / `-Apply`; onboard one client/profile at a time and verify G4 isolation before moving to the next.
 4. **Hard Agent Guardrails**:
    - **Never** modify or overwrite Hermes/Codex native `USER.md`, `MEMORY.md`, or `.env` files;
    - **Never** expose `bm_write`/`bm_edit`/`bm_move`/`bm_delete` by default or let agents mutate `domains/` directly;
@@ -114,7 +115,14 @@ python scripts/audit-freshness.py --root examples/demo-vault --strict
 ```
 
 ### 2. Preview Multi-Client Static Core Sync (Dry-Run)
+```bash
+# Cross-platform (Linux / macOS / Windows)
+python scripts/sync-static-core.py \
+  --core-path examples/demo-vault/core/core-profile.md \
+  --manifest-path scripts/sync-targets.posix.example.json
+```
 ```powershell
+# PowerShell alternative on Windows
 powershell -NoProfile -ExecutionPolicy Bypass -File scripts/sync-static-core.ps1 `
   -CorePath examples/demo-vault/core/core-profile.md `
   -ManifestPath scripts/sync-targets.example.json
@@ -134,6 +142,7 @@ Follow [`docs/client-setup.md`](docs/client-setup.md) to:
 
 ```text
 local-agent-memory/
+├── .github/workflows/ci.yml          # Ubuntu / macOS / Windows hygiene, audit & parity CI
 ├── docs/
 │   ├── architecture.md               # 4-layer model, frontmatter, TTL, B2 pending/, isolation
 │   ├── evaluation-gates.md           # G0-G9 acceptance matrix & red-team testing
@@ -141,12 +150,17 @@ local-agent-memory/
 ├── scripts/
 │   ├── apply-zh-fts-patch.py         # Idempotent patcher for basic-memory==1.0.0
 │   ├── audit-freshness.py            # Read-only freshness, link, Git & pending/ auditor
-│   ├── sync-static-core.ps1          # Managed-block static core synchronizer
-│   ├── sync-targets.example.json     # Multi-client target manifest template
+│   ├── check-repo-hygiene.py         # UTF-8/LF & path/secret zero-leak gate
+│   ├── sync-static-core.py           # Cross-platform managed-block core synchronizer
+│   ├── sync-static-core.ps1          # PowerShell managed-block core synchronizer
+│   ├── sync-targets.example.json     # Windows multi-client target manifest template
+│   ├── sync-targets.posix.example.json # POSIX (~/) target manifest template
 │   └── windows/
 │       ├── run_mcp_server.py         # Hidden-window pythonw.exe MCP launcher
 │       └── register-task-scheduler.ps1
-├── templates/                        # Config snippets for basic-memory, Antigravity, Codex, Hermes
+├── templates/                        # Config snippets + posix/ systemd & launchd keep-alive units
+├── tests/
+│   └── test_repo_contracts.py        # End-to-end audit, sync parity & patcher stub tests
 └── examples/
     ├── demo-vault/                   # Fictional runnable vault (Alex Chen)
     └── demo-restricted/              # Physical isolation boundary example
@@ -166,7 +180,7 @@ Results observed during isolated PoC validation on a 15-note vault:
 
 ## Platform Notes & Third-Party Licenses
 
-- **Platform support**: Primary verification was performed on **native Windows 11**. All Python scripts (`apply-zh-fts-patch.py`, `audit-freshness.py`) are cross-platform (Windows / macOS / Linux); macOS/Linux users can run `basic-memory` under `launchd` / `systemd --user` and adapt `sync-static-core.ps1` (or run via PowerShell 7 `pwsh`).
+- **Platform support**: Primary production verification was performed on **native Windows 11**, and CI continuously verifies hygiene, vault audits, and sync parity across **Ubuntu, macOS, and Windows**. All core scripts (`sync-static-core.py`, `apply-zh-fts-patch.py`, `audit-freshness.py`, `check-repo-hygiene.py`) use Python 3 stdlib only with zero external dependencies, alongside ready-to-use `systemd --user` and `launchd` keep-alive templates in [`templates/posix/`](templates/posix/).
 - **Licenses**:
   - This repository (`local-agent-memory` docs, templates, demo vault, and original scripts) is licensed under the **MIT License** ([LICENSE](./LICENSE)).
   - `basic-memory` is an independent third-party runtime installed separately by the user and is licensed under **AGPL-3.0-or-later**. This repository does **not** bundle or redistribute any `basic-memory` source code.

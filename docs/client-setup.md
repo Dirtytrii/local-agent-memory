@@ -39,27 +39,37 @@ bm reindex --embeddings --project agent-memory
   powershell -NoProfile -ExecutionPolicy Bypass -File scripts/windows/register-task-scheduler.ps1
   ```
 - **macOS / Linux**:
-  Run `BASIC_MEMORY_READ_ONLY=true HF_HUB_OFFLINE=1 PYTHONUTF8=1 NO_PROXY=127.0.0.1,localhost bm mcp --transport streamable-http --host 127.0.0.1 --port 8765` under a user-level `launchd` LaunchAgent or `systemd --user` unit.
+  Use the included keep-alive templates in [`templates/posix/`](../templates/posix/) (`agent-memory-mcp.service` for `systemd --user` on Linux, or `com.local-agent-memory.mcp.plist` for `launchd` on macOS) to run `bm mcp --transport streamable-http --host 127.0.0.1 --port 8765` with `BASIC_MEMORY_READ_ONLY=true`, `HF_HUB_OFFLINE=1`, `PYTHONUTF8=1`, and `NO_PROXY=127.0.0.1,localhost`.
 
 ---
 
-## 2. Static Core Sync (`sync-static-core.ps1`)
+## 2. Static Core Sync (`sync-static-core.py` / `sync-static-core.ps1`)
 
-1. Copy `scripts/sync-targets.example.json` to `scripts/sync-targets.local.json` (gitignored) and adjust target paths.
+Both synchronizers share **identical** rendering rules, exit codes, and 16-char SHA-256 managed-block hashes:
+
+1. Copy `scripts/sync-targets.posix.example.json` (macOS/Linux) or `scripts/sync-targets.example.json` (Windows) to `scripts/sync-targets.local.json` (gitignored) and adjust target paths.
 2. Always preview first (**dry-run is the default**):
+```bash
+# Cross-platform Python 3 (macOS / Linux / Windows)
+python scripts/sync-static-core.py --core-path path/to/vault/core/core-profile.md --target all
+```
 ```powershell
+# PowerShell alternative on Windows
 powershell -NoProfile -ExecutionPolicy Bypass -File scripts/sync-static-core.ps1 -CorePath path\to\vault\core\core-profile.md -Target all
 ```
 3. Apply once verified:
+```bash
+python scripts/sync-static-core.py --core-path path/to/vault/core/core-profile.md --target all --apply
+```
 ```powershell
 powershell -NoProfile -ExecutionPolicy Bypass -File scripts/sync-static-core.ps1 -CorePath path\to\vault\core\core-profile.md -Target all -Apply
 ```
 
-Safety features built into `sync-static-core.ps1`:
+Safety features built into both `sync-static-core.py` and `sync-static-core.ps1`:
 - Creates a timestamped `.bak` backup on first injection into an existing file;
 - Preserves Antigravity YAML lines 1–3 (`---\ntrigger: always_on\n---`);
 - Preserves existing user rules outside the `<!-- AGENTMEMORY:CORE:BEGIN ... END -->` block;
-- Verifies SHA-256 of existing managed blocks and aborts with a line diff on local drift (requires `-Force` to overwrite);
+- Verifies SHA-256 of existing managed blocks and aborts with a line diff on local drift (requires `--force` / `-Force` to overwrite);
 - Hard-blocks writes to `USER.md` and `MEMORY.md`;
 - Always writes UTF-8 (no BOM) with LF line endings.
 

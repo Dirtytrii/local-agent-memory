@@ -45,7 +45,7 @@ flowchart LR
         HN["Hermes 无 MCP Profile<br/>（文件直读 _index.md）"]
     end
 
-    CORE -->|"sync-static-core.ps1<br/>（SHA-256 漂移拦截）"| AG & CX & HM & HN
+    CORE -->|"sync-static-core.py / .ps1<br/>（SHA-256 漂移拦截）"| AG & CX & HM & HN
     DOM & EP --> BM
     OLL <--> BM
     BM -->|"只读 MCP<br/>（bm_search / bm_read）"| AG & CX & HM
@@ -64,8 +64,9 @@ flowchart LR
   2. 为中文自然语言查询补齐 Bigram + BM25 OR 松弛层，内置停用字/停用双字词过滤与多词覆盖门槛（在 20 条冻结中文测试集上将纯 FTS Top-1 召回从 `1/20` 提升至 `20/20`，同时保持 `5/5` 负样本零幻觉）。
   3. 通过 FastMCP `Visibility(False)` 在服务端默认彻底隐藏 `bm_write`/`bm_edit`/`bm_move`/`bm_delete`/`bm_project_delete`，并拦截 `bm_project(command="create")`（仅显式设置 `BASIC_MEMORY_READ_ONLY=false` 才放开）。
 - **两级无感降级与自动自愈（G9）**：本机 Ollama 离线导致 `bm_search(mode="hybrid")` 报错时，客户端优先降级重试 `bm_search(mode="text")`（依托补丁版中文 FTS）；仅当 MCP 本身不可用或结果为空时再直读域 `_index.md`。Ollama 恢复后 `basic-memory` 无需重启即可自动自愈。
-- **托管区块单向分发与防漂移**（[`scripts/sync-static-core.ps1`](scripts/sync-static-core.ps1)）：
-  - 默认 `dry-run`（加 `-Apply` 才写盘）；
+- **托管区块单向分发与防漂移**（[`scripts/sync-static-core.py`](scripts/sync-static-core.py) 与 [`scripts/sync-static-core.ps1`](scripts/sync-static-core.ps1)）：
+  - 提供零第三方依赖的跨平台 Python 3 版与 Windows PowerShell 版，二者 **16 位 SHA-256 托管块指纹 100% 互通对齐**；
+  - 默认 `dry-run`（加 `--apply` / `-Apply` 才写盘）；
   - 支持按端条件渲染（`<!-- target: ... -->`）与 `<= 2 KB` 的 `core-lite` 精简块提取；
   - 保护 Antigravity 首 3 行 `trigger: always_on`、首次注入自动生成带时间戳 `.bak`、写入前校验 SHA-256 防本地篡改覆盖（漂移即输出逐行 diff 并中止）、强制 UTF-8 无 BOM + LF、硬拦截严禁修改 `USER.md` / `MEMORY.md`。
 - **默认纯只读巡检脚本**（[`scripts/audit-freshness.py`](scripts/audit-freshness.py)）：
@@ -95,7 +96,7 @@ flowchart LR
    - 钉死安装 `basic-memory==1.0.0`，运行 `python scripts/apply-zh-fts-patch.py --apply` 并用 `--check` 确认 4/4 `[OK]`；
    - 参照 `examples/demo-vault/` 搭建骨架，运行 `python scripts/audit-freshness.py --root <vault> --strict` 确认 0 错误，且 `bm reindex` 后 `git status` 保持干净；
    - 仅监听回环 `127.0.0.1:8765/mcp` 启动只读服务（强制注入 `HF_HUB_OFFLINE=1`、`BASIC_MEMORY_READ_ONLY=true`、`NO_PROXY=127.0.0.1,localhost`）；
-   - 执行 `sync-static-core.ps1` 时**先跑默认 dry-run 预览**再加 `-Apply`；多端/多 Profile 分批接入，每批通过 G4 隔离验证后再推进下一批。
+   - 执行 `sync-static-core.py`（或 `sync-static-core.ps1`）时**先跑默认 dry-run 预览**再加 `--apply` / `-Apply`；多端/多 Profile 分批接入，每批通过 G4 隔离验证后再推进下一批。
 4. **Agent 硬性红线**：
    - **严禁**修改或覆盖原生 `USER.md`、`MEMORY.md` 与 `.env`；
    - **严禁**默认开放 `bm_write`/`bm_edit`/`bm_move`/`bm_delete` 或让 Agent 直接改写 `domains/`；
@@ -114,7 +115,14 @@ python scripts/audit-freshness.py --root examples/demo-vault --strict
 ```
 
 ### 2. 预览多端静态核心分发（默认 Dry-Run，不写入任何文件）
+```bash
+# 跨平台通用（Linux / macOS / Windows）
+python scripts/sync-static-core.py \
+  --core-path examples/demo-vault/core/core-profile.md \
+  --manifest-path scripts/sync-targets.posix.example.json
+```
 ```powershell
+# Windows PowerShell 等价命令
 powershell -NoProfile -ExecutionPolicy Bypass -File scripts/sync-static-core.ps1 `
   -CorePath examples/demo-vault/core/core-profile.md `
   -ManifestPath scripts/sync-targets.example.json
@@ -134,6 +142,7 @@ powershell -NoProfile -ExecutionPolicy Bypass -File scripts/sync-static-core.ps1
 
 ```text
 local-agent-memory/
+├── .github/workflows/ci.yml          # Ubuntu / macOS / Windows 编码、防泄漏与契约回归 CI
 ├── docs/
 │   ├── architecture.md               # 四层模型、Frontmatter 契约、TTL、B2 pending/、物理隔离
 │   ├── evaluation-gates.md           # G0-G9 门禁矩阵、失败退路与红队评测法
@@ -141,12 +150,17 @@ local-agent-memory/
 ├── scripts/
 │   ├── apply-zh-fts-patch.py         # basic-memory==1.0.0 三合一幂等补丁
 │   ├── audit-freshness.py            # 只读巡检与 pending/_digest.md 生成脚本
-│   ├── sync-static-core.ps1          # 托管区块分发与防漂移同步脚本
-│   ├── sync-targets.example.json     # 多端目标清单示例
+│   ├── check-repo-hygiene.py         # UTF-8 无 BOM / LF 与路径密钥防泄漏门禁脚本
+│   ├── sync-static-core.py           # 跨平台托管区块分发与防漂移同步脚本（Python 标准库）
+│   ├── sync-static-core.ps1          # Windows PowerShell 托管区块分发同步脚本
+│   ├── sync-targets.example.json     # Windows 多端目标清单示例
+│   ├── sync-targets.posix.example.json # macOS / Linux (~/) 多端目标清单示例
 │   └── windows/
 │       ├── run_mcp_server.py         # pythonw.exe 无黑框启动器
 │       └── register-task-scheduler.ps1
-├── templates/                        # basic-memory / Antigravity / Codex / Hermes 配置片段
+├── templates/                        # 多端配置片段 + posix/ systemd 与 launchd 保活模板
+├── tests/
+│   └── test_repo_contracts.py        # 端到端巡检、双实现哈希一致性与补丁生命周期测试
 └── examples/
     ├── demo-vault/                   # 虚构角色（Alex Chen）可运行示例库
     └── demo-restricted/              # 索引根外物理隔离区示例
@@ -166,7 +180,7 @@ local-agent-memory/
 
 ## 平台说明与第三方许可声明
 
-- **平台支持**：主验证环境为 **Windows 11 原生**。Python 运维脚本（`apply-zh-fts-patch.py`、`audit-freshness.py`）已做跨平台路径兼容（Windows / macOS / Linux）；macOS/Linux 用户可用 `launchd` / `systemd --user` 保活 `basic-memory`，并通过 PowerShell 7 (`pwsh`) 运行 `sync-static-core.ps1`。
+- **平台支持**：主生产验证环境为 **Windows 11 原生**，并由 GitHub Actions 在 **Ubuntu / macOS / Windows** 三平台持续验证编码、巡检与同步契约。全部核心运维脚本（`sync-static-core.py`、`apply-zh-fts-patch.py`、`audit-freshness.py`、`check-repo-hygiene.py`）均仅依赖 Python 3 标准库实现跨平台开箱即用，并在 [`templates/posix/`](templates/posix/) 附带 `systemd --user` 与 `launchd` 保活单元模板。
 - **许可证说明**：
   - 本仓库内的原创文档、模板、示例库与脚本采用 **MIT License**（见 [LICENSE](./LICENSE)）。
   - `basic-memory` 为用户自行安装的独立第三方运行依赖，其上游许可证为 **AGPL-3.0-or-later**；本仓库**不打包也不再分发**任何 `basic-memory` 源码。

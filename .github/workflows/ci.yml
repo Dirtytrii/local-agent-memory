@@ -1,0 +1,42 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    name: Verify (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python 3.12
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Check UTF-8/LF hygiene & path/secret leak gate
+        run: python scripts/check-repo-hygiene.py
+
+      - name: Run strict freshness & link audit on demo-vault
+        run: python scripts/audit-freshness.py --root examples/demo-vault --strict
+
+      - name: Run cross-platform contract & sync parity tests
+        run: python -m unittest discover -s tests -v
+
+      - name: Smoke-test cross-platform static core sync (dry-run)
+        run: |
+          python scripts/sync-static-core.py \
+            --core-path examples/demo-vault/core/core-profile.md \
+            --manifest-path scripts/sync-targets.posix.example.json
