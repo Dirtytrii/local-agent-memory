@@ -1,0 +1,12 @@
+version: 1.0
+phase: 2
+allowlist:
+  - examples/demo-vault/
+phase3_candidates:
+  - notes/essays/
+denylist:
+  - examples/demo-restricted/**
+  - examples/demo-vault/core/**
+  - examples/demo-vault/pending/**
+  - examples/demo-vault/archive/**
+  - examples/demo-vault/scripts/**

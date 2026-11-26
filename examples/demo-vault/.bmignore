@@ -1,0 +1,17 @@
+# Basic Memory Ignore Patterns (local-agent-memory)
+.*
+*.db
+*.db-shm
+*.db-wal
+config.json
+.git
+__pycache__
+*.pyc
+core/
+_index.md
+**/_index.md
+pending/
+archive/
+scripts/
+README.md
+index-roots.yaml

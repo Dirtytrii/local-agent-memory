@@ -1,0 +1,20 @@
+{
+  "env": "user",
+  "projects": {
+    "agent-memory": {
+      "path": "C:\\path\\to\\your\\vault\\AgentMemory",
+      "mode": "local"
+    }
+  },
+  "default_project": "agent-memory",
+  "semantic_embedding_provider": "openai",
+  "semantic_embedding_model": "bge-m3",
+  "semantic_embedding_api_base": "http://127.0.0.1:11434/v1",
+  "semantic_embedding_api_key": "ollama",
+  "semantic_embedding_dimensions": 1024,
+  "semantic_min_similarity": 0.55,
+  "default_search_type": "hybrid",
+  "ensure_frontmatter_on_sync": false,
+  "permalinks_include_project": false,
+  "auto_update": false
+}

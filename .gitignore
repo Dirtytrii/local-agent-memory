@@ -1,0 +1,20 @@
+# Local machine-specific configs & backups
+scripts/sync-targets.local.json
+*.bak
+*.orig
+*.agentmemory.orig
+
+# Derived caches & runtime logs
+*.db
+*.db-shm
+*.db-wal
+*.log
+__pycache__/
+*.pyc
+.pytest_cache/
+
+# Secrets & OS junk
+.env
+.env.*
+.DS_Store
+Thumbs.db

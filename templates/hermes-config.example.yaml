@@ -1,0 +1,7 @@
+# Append to each MCP-enabled Hermes profile's config.yaml
+# Leave non-MCP profiles (e.g., high-noise creative/media profiles) without this block.
+mcp_servers:
+  agent-memory:
+    url: http://127.0.0.1:8765/mcp
+    timeout: 30
+    connect_timeout: 15

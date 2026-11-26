@@ -1,0 +1,34 @@
+[
+  {
+    "name": "antigravity",
+    "group": "antigravity",
+    "renderTarget": "agent-mcp",
+    "mode": "full",
+    "strategy": "antigravity_frontmatter_replace",
+    "path": "%USERPROFILE%\\.gemini\\config\\plugins\\personal-memory\\rules\\core-profile.md"
+  },
+  {
+    "name": "codex",
+    "group": "codex",
+    "renderTarget": "agent-mcp",
+    "mode": "full",
+    "strategy": "preserve_outside_append",
+    "path": "%USERPROFILE%\\.codex\\AGENTS.md"
+  },
+  {
+    "name": "hermes-default",
+    "group": "hermes",
+    "renderTarget": "agent-mcp",
+    "mode": "lite",
+    "strategy": "preserve_outside_append",
+    "path": "%LOCALAPPDATA%\\hermes\\SOUL.md"
+  },
+  {
+    "name": "hermes-writer-nomcp",
+    "group": "hermes",
+    "renderTarget": "agent-nomcp",
+    "mode": "lite",
+    "strategy": "preserve_outside_append",
+    "path": "%LOCALAPPDATA%\\hermes\\profiles\\writer\\SOUL.md"
+  }
+]
