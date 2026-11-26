@@ -78,6 +78,32 @@ flowchart LR
 
 ---
 
+## 面向 AI Agent 的直接上手指引（让你的 Agent 帮你部署）
+
+如果你是正在读取本仓库的 AI 编程代理（Antigravity、Codex、Claude Code、Hermes、Cursor 等），受用户委托部署 `local-agent-memory`，请严格按以下协议执行，不要跳过检查直接魔改配置：
+
+> **用户一句话唤起模板**：*“阅读 `https://github.com/Dirtytrii/local-agent-memory`（或当前本地克隆仓），先只读盘点我本机的工具链和客户端配置，再按仓库协议分阶段帮我落地这套本地全局记忆系统。”*
+
+### Agent 执行协议
+1. **先只读摸底（0 写入）**：依次阅读 [`docs/architecture.md`](docs/architecture.md)、[`docs/client-setup.md`](docs/client-setup.md) 与 [`docs/evaluation-gates.md`](docs/evaluation-gates.md)；只读检查宿主机 OS、Python/`uv`、本机 Ollama（`bge-m3`）及现有客户端配置路径。
+2. **动文件前必须向用户确认 4 项输入**：
+   - 唯一真源记忆库路径（Git 仓内）与物理隔离的外部 `Restricted/` 路径；
+   - 初始领域划分（如 `engineering` / `writing` / `personal`）及哪些域标记为 `sensitivity: private`；
+   - 需要接入的客户端列表（区分挂载 MCP 的端与仅文件直读 `_index.md` 的端）；
+   - 是否先在临时隔离副本跑通 G0–G4 验收门禁后再接入正式客户端（强烈推荐）。
+3. **按安全顺序落地**：
+   - 钉死安装 `basic-memory==1.0.0`，运行 `python scripts/apply-zh-fts-patch.py --apply` 并用 `--check` 确认 4/4 `[OK]`；
+   - 参照 `examples/demo-vault/` 搭建骨架，运行 `python scripts/audit-freshness.py --root <vault> --strict` 确认 0 错误，且 `bm reindex` 后 `git status` 保持干净；
+   - 仅监听回环 `127.0.0.1:8765/mcp` 启动只读服务（强制注入 `HF_HUB_OFFLINE=1`、`BASIC_MEMORY_READ_ONLY=true`、`NO_PROXY=127.0.0.1,localhost`）；
+   - 执行 `sync-static-core.ps1` 时**先跑默认 dry-run 预览**再加 `-Apply`；多端/多 Profile 分批接入，每批通过 G4 隔离验证后再推进下一批。
+4. **Agent 硬性红线**：
+   - **严禁**修改或覆盖原生 `USER.md`、`MEMORY.md` 与 `.env`；
+   - **严禁**默认开放 `bm_write`/`bm_edit`/`bm_move`/`bm_delete` 或让 Agent 直接改写 `domains/`；
+   - **严禁**未经确认执行 `git push`、删除 `.bak` 备份，或将 `pending/` 混入常规 Git 提交；
+   - **严禁**在未备份的前提下首次修改 `config.toml`、`SOUL.md` 或 `AGENTS.md`。
+
+---
+
 ## 5 分钟快速体验（内置虚构 Demo 库）
 
 仓库自带一套 **100% 虚构**的示例记忆库（`examples/demo-vault/`），Clone 下来即可零侵入跑通核心脚本：

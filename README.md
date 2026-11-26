@@ -78,6 +78,32 @@ flowchart LR
 
 ---
 
+## For AI Agents (Let Your Agent Set This Up)
+
+If you are an AI coding agent (Antigravity, Codex, Claude Code, Hermes, Cursor, etc.) asked to deploy `local-agent-memory` for a user, follow this exact protocol instead of improvising:
+
+> **User one-liner**: *"Read `https://github.com/Dirtytrii/local-agent-memory` (or this cloned repo) and help me deploy it step by step, starting with a read-only environment probe."*
+
+### Agent Execution Protocol
+1. **Read first (zero writes)**: Read [`docs/architecture.md`](docs/architecture.md), [`docs/client-setup.md`](docs/client-setup.md), and [`docs/evaluation-gates.md`](docs/evaluation-gates.md). Inspect the host OS, Python/`uv`, Ollama (`bge-m3`), and existing client configs without modifying any files.
+2. **Confirm 4 inputs with the user before writing**:
+   - Canonical vault directory (Git-backed) and separate external `Restricted/` directory;
+   - Initial domain list (e.g., `engineering`, `writing`, `personal`) and which domains are `sensitivity: private`;
+   - Target AI clients to onboard (e.g., Antigravity, Codex, Hermes MCP vs non-MCP profiles);
+   - Whether to validate on an isolated temporary replica first (recommended: G0–G4) before wiring live clients.
+3. **Execute in safe order**:
+   - Pin `basic-memory==1.0.0`, apply `python scripts/apply-zh-fts-patch.py --apply`, verify 4/4 `[OK]` via `--check`;
+   - Scaffold the vault from `examples/demo-vault/` structure, run `python scripts/audit-freshness.py --root <vault> --strict` (must pass with 0 errors), and verify `git status` stays clean after `bm reindex`;
+   - Register loopback-only (`127.0.0.1:8765/mcp`) read-only MCP service (`HF_HUB_OFFLINE=1`, `BASIC_MEMORY_READ_ONLY=true`, `NO_PROXY=127.0.0.1,localhost`);
+   - Always preview `sync-static-core.ps1` in **dry-run** mode before passing `-Apply`; onboard one client/profile at a time and verify G4 isolation before moving to the next.
+4. **Hard Agent Guardrails**:
+   - **Never** modify or overwrite Hermes/Codex native `USER.md`, `MEMORY.md`, or `.env` files;
+   - **Never** expose `bm_write`/`bm_edit`/`bm_move`/`bm_delete` by default or let agents mutate `domains/` directly;
+   - **Never** run `git push`, delete existing backups, or mix `pending/` into normal commits without explicit confirmation;
+   - **Never** skip backup creation before first-time edits to `~/.codex/config.toml`, `SOUL.md`, or `AGENTS.md`.
+
+---
+
 ## 5-Minute Quickstart (Try on the Included Demo Vault)
 
 This repository ships with a **100% fictional** demo vault (`examples/demo-vault/`) so you can test every script immediately without touching personal notes.
