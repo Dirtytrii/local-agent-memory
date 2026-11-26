@@ -72,8 +72,8 @@ flowchart LR
 - **Read-Only Freshness & Governance Auditor** ([`scripts/audit-freshness.py`](scripts/audit-freshness.py)):
   - Zero writes by default; validates frontmatter schema, `permalink` prefixes (`<domain>-*` vs `episode-YYYYMMDD-*`), `L0`/`L1`/`L2` TTL expiry, relative Markdown link integrity, UTF-8/LF hygiene, unauthorized `domains/` uncommitted edits, and `pending/` 14d/30d aging.
   - Explicit `--write-digest` generates `pending/_digest.md` for weekly human review.
-- **Production-Tested Windows Keep-Alive** ([`scripts/windows/`](scripts/windows/)):
-  - Hidden-window `pythonw.exe` launcher (fixes `sys.stdin=None` crash under GUI-subsystem Python), `HF_HUB_OFFLINE=1` zero silent HuggingFace downloads, `NO_PROXY=127.0.0.1,localhost`, and Task Scheduler 1-minute crash recovery.
+- **Production-Tested Windows Keep-Alive & Verification** ([`scripts/windows/`](scripts/windows/)):
+  - Hidden-window `pythonw.exe` launcher (fixes `sys.stdin=None` crash under GUI-subsystem Python), `HF_HUB_OFFLINE=1` zero silent HuggingFace downloads, `NO_PROXY=127.0.0.1,localhost`, Task Scheduler 1-minute crash recovery, plus a read-only post-reboot G1/G8/security verification script (`verify-reboot-g1-g8.ps1`).
 - **G0–G9 Acceptance Gate Framework** ([`docs/evaluation-gates.md`](docs/evaluation-gates.md)):
   - Frozen positive/negative/red-team query methodology with explicit failure-to-fallback rules.
 
@@ -157,7 +157,8 @@ local-agent-memory/
 │   ├── sync-targets.posix.example.json # POSIX (~/) target manifest template
 │   └── windows/
 │       ├── run_mcp_server.py         # Hidden-window pythonw.exe MCP launcher
-│       └── register-task-scheduler.ps1
+│       ├── register-task-scheduler.ps1
+│       └── verify-reboot-g1-g8.ps1   # Read-only post-reboot G1/G8/security verifier
 ├── templates/                        # Config snippets + posix/ systemd & launchd keep-alive units
 ├── tests/
 │   └── test_repo_contracts.py        # End-to-end audit, sync parity & patcher stub tests

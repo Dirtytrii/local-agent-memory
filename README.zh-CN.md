@@ -72,8 +72,8 @@ flowchart LR
 - **默认纯只读巡检脚本**（[`scripts/audit-freshness.py`](scripts/audit-freshness.py)）：
   - 自动发现 `domains/` 下所有域，校验 Frontmatter 契约、`permalink` 前缀编码（`<domain>-*` vs `episode-YYYYMMDD-*`）、`L0/L1/L2` TTL 超期、相对 Markdown 链接断链、UTF-8/LF 编码、`domains/` 未授权未提交改动及 `pending/` 14 天告警 / 30 天归置。
   - 显式传 `--write-digest` 生成每周人工审批清单 `pending/_digest.md`。
-- **Windows 11 无黑框保活套件**（[`scripts/windows/`](scripts/windows/)）：
-  - 基于 `pythonw.exe` 启动（自带 `sys.stdin=os.devnull` 补丁修复 GUI 子系统下 `isatty()` 崩溃）、强制 `HF_HUB_OFFLINE=1` 与 `NO_PROXY=127.0.0.1,localhost`，由任务计划程序在当前用户登录时拉起并支持失败 1 分钟自动重启。
+- **Windows 11 无黑框保活与一键验收套件**（[`scripts/windows/`](scripts/windows/)）：
+  - 基于 `pythonw.exe` 启动（自带 `sys.stdin=os.devnull` 补丁修复 GUI 子系统下 `isatty()` 崩溃）、强制 `HF_HUB_OFFLINE=1` 与 `NO_PROXY=127.0.0.1,localhost`，由任务计划程序在当前用户登录时拉起并支持失败 1 分钟自动重启；附带纯只读重启后 G1/G8 与安全面一键验收脚本（`verify-reboot-g1-g8.ps1`）。
 - **G0–G9 门禁评测与失败退路矩阵**（[`docs/evaluation-gates.md`](docs/evaluation-gates.md)）：
   - 先在独立副本跑通冻结正/负/红队样本与 30 分钟耐力压测，再切入真实工作流。
 
@@ -157,7 +157,8 @@ local-agent-memory/
 │   ├── sync-targets.posix.example.json # macOS / Linux (~/) 多端目标清单示例
 │   └── windows/
 │       ├── run_mcp_server.py         # pythonw.exe 无黑框启动器
-│       └── register-task-scheduler.ps1
+│       ├── register-task-scheduler.ps1
+│       └── verify-reboot-g1-g8.ps1   # 纯只读重启后 G1/G8 与安全面一键验收脚本
 ├── templates/                        # 多端配置片段 + posix/ systemd 与 launchd 保活模板
 ├── tests/
 │   └── test_repo_contracts.py        # 端到端巡检、双实现哈希一致性与补丁生命周期测试

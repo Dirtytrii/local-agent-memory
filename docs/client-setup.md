@@ -38,6 +38,13 @@ bm reindex --embeddings --project agent-memory
   ```powershell
   powershell -NoProfile -ExecutionPolicy Bypass -File scripts/windows/register-task-scheduler.ps1
   ```
+  3. After rebooting (or anytime you want a 10-second read-only health check), run the G1/G8 & security verifier (bypasses system HTTP proxy, checks Task Scheduler, loopback `:8765`/`:11434`, `bge-m3` 1024-dim vector & GGUF digest, `Host 421`/`Origin 403`, read-only tool surface, and `text`/`hybrid` latency):
+  ```powershell
+  powershell -NoProfile -ExecutionPolicy Bypass -File scripts/windows/verify-reboot-g1-g8.ps1
+  # Optional strict G8 digest pin:
+  # powershell -NoProfile -ExecutionPolicy Bypass -File scripts/windows/verify-reboot-g1-g8.ps1 -ExpectedGgufDigest "sha256:<your-bge-m3-gguf-digest>"
+  ```
+  > Tip: Set `OLLAMA_KEEP_ALIVE=30m` (and `OLLAMA_MODELS` if using a custom model directory) in User environment variables to avoid repeated 5-minute cold reloads on laptops without permanently locking RAM/VRAM.
 - **macOS / Linux**:
   Use the included keep-alive templates in [`templates/posix/`](../templates/posix/) (`agent-memory-mcp.service` for `systemd --user` on Linux, or `com.local-agent-memory.mcp.plist` for `launchd` on macOS) to run `bm mcp --transport streamable-http --host 127.0.0.1 --port 8765` with `BASIC_MEMORY_READ_ONLY=true`, `HF_HUB_OFFLINE=1`, `PYTHONUTF8=1`, and `NO_PROXY=127.0.0.1,localhost`.
 
